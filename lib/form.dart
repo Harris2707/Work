@@ -1,84 +1,75 @@
-
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const FormValidationApp());
-}
+void main() => runApp(const MyApp());
 
-class FormValidationApp extends StatelessWidget {
-  const FormValidationApp({super.key});
-
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Form Validation',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const MyFormScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Form Validation Demo',
+        theme: ThemeData(primarySwatch: Colors.blue), // Removed const here
+        home: const MyForm(),
+      );
 }
 
-class MyFormScreen extends StatefulWidget {
-  const MyFormScreen({super.key});
-
+class MyForm extends StatefulWidget {
+  const MyForm({super.key});
   @override
-  State<MyFormScreen> createState() => _MyFormScreenState();
+  State<MyForm> createState() => _MyFormState();
 }
 
-class _MyFormScreenState extends State<MyFormScreen> {
+class _MyFormState extends State<MyForm> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
 
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  String? _validateName(String? value) => value?.isEmpty ?? true
+      ? 'Please enter your name'
+      : value!.contains(RegExp(r'[0-9]'))
+          ? 'Name cannot contain numbers'
+          : null;
+
+  String? _validateEmail(String? value) => value?.isEmpty ?? true
+      ? 'Please enter your email'
+      : !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)
+          ? 'Please enter a valid email'
+          : null;
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Form submitted successfully!')),
+        const SnackBar(content: Text('Form validated successfully!')),
       );
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Form Validation")),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter your name' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Enter your email';
-                  } else if (!RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
-                    return 'Enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _submitForm,
-                child: const Text('Submit'),
-              )
-            ],
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Form Validation')),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: _validateName,
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: _validateEmail,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                    onPressed: _submitForm, child: const Text('Submit')),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
