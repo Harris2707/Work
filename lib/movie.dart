@@ -1,91 +1,63 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-void main() => runApp(const MovieApp());
+void main() => runApp(MaterialApp(home: HomePage()));
 
-class MovieApp extends StatelessWidget {
-  const MovieApp({super.key});
-
+class HomePage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Movie Rating App',
-      theme: ThemeData.dark(),
-      home: const MovieListScreen(),
-      debugShowCheckedModeBanner: false,
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List _movies = [];
+  final _controller = TextEditingController();
+
+  Future<void> fetchMovies(int count) async {
+    final response = await http.get(
+      Uri.parse('https://www.freetestapi.com/api/v1/movies?limit=$count'),
     );
+    if (response.statusCode == 200) {
+      setState(() => _movies = json.decode(response.body));
+    }
   }
-}
-
-class Movie {
-  final String title;
-  double rating;
-
-  Movie({required this.title, this.rating = 0.0});
-}
-
-class MovieListScreen extends StatefulWidget {
-  const MovieListScreen({super.key});
-
-  @override
-  State<MovieListScreen> createState() => _MovieListScreenState();
-}
-
-class _MovieListScreenState extends State<MovieListScreen> {
-  final List<Movie> movies = [
-    Movie(title: "Inception"),
-    Movie(title: "The Dark Knight"),
-    Movie(title: "Interstellar"),
-    Movie(title: "Avatar"),
-    Movie(title: "Titanic"),
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Rate Movies")),
-      body: ListView.builder(
-        itemCount: movies.length,
-        itemBuilder: (context, index) {
-          final movie = movies[index];
-          return Card(
-            margin: const EdgeInsets.all(10),
-            child: ListTile(
-              title: Text(movie.title),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RatingBar.builder(
-                    initialRating: movie.rating,
-                    minRating: 1,
-                    direction: Axis.horizontal,
-                    allowHalfRating: true,
-                    itemSize: 30,
-                    itemCount: 5,
-                    itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    itemBuilder: (context, _) => const Icon(
-                      Icons.star,
-                      color: Colors.amber,
-                    ),
-                    onRatingUpdate: (rating) {
-                      setState(() {
-                        movie.rating = rating;
-                      });
-                    },
+      appBar: AppBar(title: Text('Movies')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(hintText: 'Number of movies'),
                   ),
-                  Text("Your Rating: ${movie.rating.toStringAsFixed(1)}"),
-                ],
-              ),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      () => fetchMovies(int.tryParse(_controller.text) ?? 0),
+                  child: Text('Show'),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _movies.length,
+              itemBuilder:
+                  (_, i) => ListTile(
+                    title: Text(_movies[i]['title']),
+                    subtitle: Text('Rating: ${_movies[i]['rating']}'),
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-/*
-dependencies:
-  flutter:
-    sdk: flutter
-  flutter_rating_bar: ^4.0.1
-*/
