@@ -2,100 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-void main() => runApp(const WebServiceApp());
+void main() => runApp(MaterialApp(home: HomePage()));
 
-class WebServiceApp extends StatelessWidget {
-  const WebServiceApp({super.key});
-
+class HomePage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Web Service Example',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const UserListScreen(),
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List _movies = [];
+  final _controller = TextEditingController();
+
+  Future<void> fetchMovies(int count) async {
+    final response = await http.get(
+      Uri.parse('https://www.freetestapi.com/api/v1/movies?limit=$count'),
     );
-  }
-}
-
-class User {
-  final int id;
-  final String name;
-  final String email;
-
-  User({required this.id, required this.name, required this.email});
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-    );
-  }
-}
-
-class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
-
-  @override
-  State<UserListScreen> createState() => _UserListScreenState();
-}
-
-class _UserListScreenState extends State<UserListScreen> {
-  late Future<List<User>> users;
-
-  Future<List<User>> fetchUsers() async {
-    final response =
-        await http.get(Uri.parse('https://jsonplaceholder.typicode.com/users'));
-
     if (response.statusCode == 200) {
-      List jsonData = json.decode(response.body);
-      return jsonData.map((data) => User.fromJson(data)).toList();
-    } else {
-      throw Exception("Failed to load users");
+      setState(() => _movies = json.decode(response.body));
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    users = fetchUsers();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Users")),
-      body: FutureBuilder<List<User>>(
-        future: users,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No users found."));
-          } else {
-            return ListView.builder(
-              itemCount: snapshot.data!.length,
-              itemBuilder: (_, index) {
-                final user = snapshot.data![index];
-                return ListTile(
-                  title: Text(user.name),
-                  subtitle: Text(user.email),
-                );
-              },
-            );
-          }
-        },
+      appBar: AppBar(title: Text('Movies')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(hintText: 'Number of movies'),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      () => fetchMovies(int.tryParse(_controller.text) ?? 0),
+                  child: Text('Show'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _movies.length,
+              itemBuilder:
+                  (_, i) => ListTile(
+                    title: Text(_movies[i]['title']),
+                    subtitle: Text('Rating: ${_movies[i]['rating']}'),
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-/* 
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^0.13.6
-
-*/
