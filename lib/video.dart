@@ -5,21 +5,17 @@ void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Simple Video Player',
-      theme: ThemeData.dark(),
-      home: const VideoPlayerScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Simple Video Player',
+        theme: ThemeData.dark(),
+        home: const VideoPlayerScreen(),
+        debugShowCheckedModeBanner: false,
+      );
 }
 
 class VideoPlayerScreen extends StatefulWidget {
   const VideoPlayerScreen({super.key});
-
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
@@ -30,13 +26,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    // Use a sample video URL or your own
-    _controller = VideoPlayerController.network(
-      'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-    )..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4'),
+    )..initialize().then((_) => setState(() {}));
+
+    _controller.addListener(() {
+      setState(() {}); // Rebuild UI on video state changes
+    });
+    _controller.play();
   }
 
   @override
@@ -46,46 +43,33 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Video Player")),
-      body: Center(
-        child: _controller.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    VideoPlayer(_controller),
-                    VideoProgressIndicator(_controller, allowScrubbing: true),
-                    Positioned(
-                      bottom: 10,
-                      right: 10,
-                      child: FloatingActionButton(
-                        onPressed: () {
-                          setState(() {
-                            _controller.value.isPlaying
-                                ? _controller.pause()
-                                : _controller.play();
-                          });
-                        },
-                        child: Icon(
-                          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text("Video Player")),
+        body: Center(
+          child: _controller.value.isInitialized
+              ? AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      VideoPlayer(_controller),
+                      VideoProgressIndicator(_controller, allowScrubbing: true),
+                      Positioned(
+                        bottom: 10,
+                        right: 10,
+                        child: FloatingActionButton(
+                          onPressed: () => setState(() =>
+                              _controller.value.isPlaying
+                                  ? _controller.pause()
+                                  : _controller.play()),
+                          child: Icon(
+                              _controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              )
-            : const CircularProgressIndicator(),
-      ),
-    );
-  }
+                    ],
+                  ),
+                )
+              : const CircularProgressIndicator(),
+        ),
+      );
 }
-
-/*
-dependencies:
-  flutter:
-    sdk: flutter
-  video_player: ^2.7.0
-*/
