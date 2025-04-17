@@ -1,121 +1,103 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'customer_db.dart';
+import 'customer_form.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(CustomerApp());
+}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CustomerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SQLite Notes',
-      theme: ThemeData(primarySwatch: Colors.teal),
-      home: const NotesPage(),
+      title: 'Customer Manager',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: CustomerListScreen(),
     );
   }
 }
 
-class NotesPage extends StatefulWidget {
-  const NotesPage({super.key});
-
+class CustomerListScreen extends StatefulWidget {
   @override
-  State<NotesPage> createState() => _NotesPageState();
+  _CustomerListScreenState createState() => _CustomerListScreenState();
 }
 
-class _NotesPageState extends State<NotesPage> {
-  late Database db;
-  final TextEditingController _controller = TextEditingController();
-  List<Map<String, dynamic>> _notes = [];
+class _CustomerListScreenState extends State<CustomerListScreen> {
+  List<Map<String, dynamic>> _customers = [];
 
   @override
   void initState() {
     super.initState();
-    _initDb();
+    _fetchCustomers();
   }
 
-  Future<void> _initDb() async {
-    Directory dir = await getApplicationDocumentsDirectory();
-    String path = join(dir.path, 'notes.db');
-    db = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute('CREATE TABLE notes(id INTEGER PRIMARY KEY, title TEXT)');
-      },
-    );
-    _fetchNotes();
-  }
-
-  Future<void> _fetchNotes() async {
-    final data = await db.query('notes');
+  Future<void> _fetchCustomers() async {
+    final customers = await CustomerDB.instance.getAllCustomers();
     setState(() {
-      _notes = data;
+      _customers = customers;
     });
   }
 
-  Future<void> _addNote() async {
-    String title = _controller.text.trim();
-    if (title.isNotEmpty) {
-      await db.insert('notes', {'title': title});
-      _controller.clear();
-      _fetchNotes();
+  void _addCustomer() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => CustomerForm(),
+    );
+
+    if (result != null) {
+      await CustomerDB.instance.insertCustomer(result);
+      _fetchCustomers();
     }
   }
 
-  Future<void> _deleteNote(int id) async {
-    await db.delete('notes', where: 'id = ?', whereArgs: [id]);
-    _fetchNotes();
+  void _editCustomer(Map<String, dynamic> customer) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => CustomerForm(customer: customer),
+    );
+
+    if (result != null) {
+      await CustomerDB.instance.updateCustomer(customer['id'], result);
+      _fetchCustomers();
+    }
+  }
+
+  void _deleteCustomer(int id) async {
+    await CustomerDB.instance.deleteCustomer(id);
+    _fetchCustomers();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("SQLite Notes")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+      appBar: AppBar(title: Text('Customer Manager')),
+      body: ListView.builder(
+        itemCount: _customers.length,
+        itemBuilder: (context, index) {
+          final customer = _customers[index];
+          return ListTile(
+            title: Text(customer['name']),
+            subtitle: Text('Age: ${customer['age']}, Phone: ${customer['phone']}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(labelText: 'Enter note'),
-                  ),
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _editCustomer(customer),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _addNote,
-                )
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _deleteCustomer(customer['id']),
+                ),
               ],
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _notes.length,
-              itemBuilder: (_, i) => ListTile(
-                title: Text(_notes[i]['title']),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _deleteNote(_notes[i]['id']),
-                ),
-              ),
-            ),
-          )
-        ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.add),
+        onPressed: _addCustomer,
       ),
     );
   }
 }
-
-/*
-dependencies:
-  flutter:
-    sdk: flutter
-  sqflite: ^2.3.2
-  path: ^1.9.0
-  path_provider: ^2.1.2
-*/
